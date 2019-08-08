@@ -1,14 +1,21 @@
 package com.preccydev.travelmantics;
 
 import android.app.Activity;
+import android.util.Log;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import com.firebase.ui.auth.AuthUI;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.database.ChildEventListener;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.storage.FirebaseStorage;
+import com.google.firebase.storage.StorageReference;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -20,15 +27,18 @@ public class FirebaseUtils {
     private static FirebaseUtils sFirebaseUtils;
     public static FirebaseAuth sFirebaseAuth;
     public static FirebaseAuth.AuthStateListener sAuthStateListener;
+    public static FirebaseStorage sFirebaseStorage;
+    public static StorageReference sStorageReference;
     public static ArrayList<TravelDeal> sDeals;
     private static final int RC_SIGN_IN = 123;
-    private static Activity caller;
+    private static ListActivity caller;
+    public static boolean isAdmin;
 
     private FirebaseUtils() {
 
     }
 
-    public static void openFbReference(String ref, final Activity callerActivity) {
+    public static void openFbReference(String ref, final ListActivity callerActivity) {
         if (sFirebaseUtils == null) {
             sFirebaseUtils = new FirebaseUtils();
             sFirebaseDatabase = FirebaseDatabase.getInstance();
@@ -38,20 +48,37 @@ public class FirebaseUtils {
             sAuthStateListener = new FirebaseAuth.AuthStateListener() {
                 @Override
                 public void onAuthStateChanged(@NonNull FirebaseAuth firebaseAuth) {
-                   FirebaseUtils.sinin();
-                    Toast.makeText(callerActivity.getBaseContext(), "Welcome back", Toast.LENGTH_LONG).show();
+                    if (firebaseAuth.getCurrentUser() == null) {
+                        FirebaseUtils.sinin();
+                    } else {
+                        String usedId = firebaseAuth.getUid();
+                        checkAdmin(usedId);
+                        Toast.makeText(callerActivity.getBaseContext(), "Welcome back", Toast.LENGTH_LONG).show();
+                    }
+
+
                 }
 
 
             };
 
+            connectStore();
         }
 
         sDeals = new ArrayList<TravelDeal>();
         sDatabaseReference = sFirebaseDatabase.getReference().child(ref);
     }
 
-    private static void sinin (){
+
+    public static void attachListener() {
+        sFirebaseAuth.addAuthStateListener(sAuthStateListener);
+    }
+
+    public static void detachListener() {
+        sFirebaseAuth.removeAuthStateListener(sAuthStateListener);
+    }
+
+    private static void sinin() {
 
         // Choose authentication providers
         List<AuthUI.IdpConfig> providers = Arrays.asList(
@@ -66,14 +93,44 @@ public class FirebaseUtils {
                         .build(),
                 RC_SIGN_IN);
 
+
     }
 
+    private static void checkAdmin(String usedId) {
+        FirebaseUtils.isAdmin = false;
+        DatabaseReference ref = sFirebaseDatabase.getReference().child("administrators").child(usedId);
+        ChildEventListener listener = new ChildEventListener() {
+            @Override
+            public void onChildAdded(@NonNull DataSnapshot dataSnapshot, @Nullable String s) {
+                FirebaseUtils.isAdmin = true;
+                Log.d("Admin", "You're an Administrator");
+            }
 
-        public static void attachListener () {
-            sFirebaseAuth.addAuthStateListener(sAuthStateListener);
-        }
+            @Override
+            public void onChildChanged(@NonNull DataSnapshot dataSnapshot, @Nullable String s) {
 
-        public static void detachListener () {
-            sFirebaseAuth.removeAuthStateListener(sAuthStateListener);
-        }
+            }
+
+            @Override
+            public void onChildRemoved(@NonNull DataSnapshot dataSnapshot) {
+
+            }
+
+            @Override
+            public void onChildMoved(@NonNull DataSnapshot dataSnapshot, @Nullable String s) {
+
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError databaseError) {
+
+            }
+        };
+        ref.addChildEventListener(listener);
     }
+
+    public static void connectStore() {
+        sFirebaseStorage = FirebaseStorage.getInstance();
+        sStorageReference = sFirebaseStorage.getReference().child(("deals_picture"));
+    }
+}

@@ -27,7 +27,6 @@ public class DealAdapter extends RecyclerView.Adapter<DealAdapter.DealViewHolder
     private DatabaseReference mDatabaseReference;
     private ChildEventListener mChildEventListener;
     public DealAdapter(){
-       //FirebaseUtils.openFbReference("traveldeals");
         mFirebaseDatabase = FirebaseUtils.sFirebaseDatabase;
         mDatabaseReference = FirebaseUtils.sDatabaseReference;
         this.deals = FirebaseUtils.sDeals;
@@ -39,7 +38,6 @@ public class DealAdapter extends RecyclerView.Adapter<DealAdapter.DealViewHolder
                 td.setId(dataSnapshot.getKey());
                 deals.add(td);
                 notifyItemInserted(deals.size() - 1);
-
             }
 
             @Override
